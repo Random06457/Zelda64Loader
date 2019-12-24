@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mm64;
+package zelda64;
 
 import java.io.*;
 import java.util.*;
@@ -33,18 +33,18 @@ import ghidra.util.task.TaskMonitor;
  * TODO: Provide class-level documentation that describes what this file system
  * does.
  */
-@FileSystemInfo(type = "mm64dmadatafs", // ([a-z0-9]+ only)
-        description = "Majora's Mask 64 DMA Filesystem", factory = Mm64FileSystem.MyFileSystemFactory.class)
-public class Mm64FileSystem implements GFileSystem {
+@FileSystemInfo(type = "zelda64dmadatafs", // ([a-z0-9]+ only)
+        description = "Zelda 64 DMA Filesystem", factory = Zelda64FileSystem.MyFileSystemFactory.class)
+public class Zelda64FileSystem implements GFileSystem {
 
     private final FSRLRoot fsFSRL;
-    private FileSystemIndexHelper<Mm64File> fsih;
+    private FileSystemIndexHelper<Zelda64File> fsih;
     private FileSystemRefManager refManager = new FileSystemRefManager(this);
 
-    private Mm64Game game;
+    private Zelda64Game game;
     private boolean closed;
 
-    public Mm64FileSystem(FSRLRoot fsFSRL, Mm64Game game) {
+    public Zelda64FileSystem(FSRLRoot fsFSRL, Zelda64Game game) {
         this.fsFSRL = fsFSRL;
         this.game = game;
         this.fsih = new FileSystemIndexHelper<>(this, fsFSRL);
@@ -52,9 +52,9 @@ public class Mm64FileSystem implements GFileSystem {
     }
 
     public void mount(TaskMonitor monitor) {
-        monitor.setMessage("Opening " + Mm64FileSystem.class.getSimpleName() + "...");
+        monitor.setMessage("Opening " + Zelda64FileSystem.class.getSimpleName() + "...");
 
-        for (Mm64File file : game.mFiles) {
+        for (Zelda64File file : game.mFiles) {
             if (monitor.isCancelled()) {
                 break;
             }
@@ -102,7 +102,7 @@ public class Mm64FileSystem implements GFileSystem {
 
     @Override
     public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
-        Mm64File entry = fsih.getMetadata(file);
+        Zelda64File entry = fsih.getMetadata(file);
         return (entry != null && !entry.Deleted && entry.Valid())
                 ? new ByteProviderInputStream(new ByteArrayProvider(entry.Data), 0, entry.Data.length)
                 : null;
@@ -115,11 +115,11 @@ public class Mm64FileSystem implements GFileSystem {
 
     @Override
     public String getInfo(GFile file, TaskMonitor monitor) {
-        Mm64File metadata = fsih.getMetadata(file);
+        Zelda64File metadata = fsih.getMetadata(file);
         return (metadata == null) ? null : FSUtilities.infoMapToString(getInfoMap(metadata));
     }
 
-    public Map<String, String> getInfoMap(Mm64File file) {
+    public Map<String, String> getInfoMap(Zelda64File file) {
         Map<String, String> info = new LinkedHashMap<>();
 
         if (!file.Valid()) {
@@ -135,17 +135,17 @@ public class Mm64FileSystem implements GFileSystem {
         return info;
     }
 
-    public static class MyFileSystemFactory implements GFileSystemFactoryFull<Mm64FileSystem>, GFileSystemProbeFull {
+    public static class MyFileSystemFactory implements GFileSystemFactoryFull<Zelda64FileSystem>, GFileSystemProbeFull {
 
         @Override
-        public Mm64FileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL, ByteProvider byteProvider,
+        public Zelda64FileSystem create(FSRL containerFSRL, FSRLRoot targetFSRL, ByteProvider byteProvider,
                 File containerFile, FileSystemService fsService, TaskMonitor monitor)
                 throws IOException, CancelledException {
             try {
                 byte[] data = byteProvider.getInputStream(0).readAllBytes();
-                Mm64Game game = new Mm64Game(data, true, monitor);
+                Zelda64Game game = new Zelda64Game(data, true, monitor);
                 byteProvider.close();
-                Mm64FileSystem fs = new Mm64FileSystem(targetFSRL, game);
+                Zelda64FileSystem fs = new Zelda64FileSystem(targetFSRL, game);
                 fs.mount(monitor);
                 return fs;
             } catch (Exception e) {
@@ -161,7 +161,7 @@ public class Mm64FileSystem implements GFileSystem {
 
             byte[] data = byteProvider.getInputStream(0).readAllBytes();
             try {
-                new Mm64Game(data, false, null);
+                new Zelda64Game(data, false, null);
                 return true;
             } catch (Exception e) {
                 return false;

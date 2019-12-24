@@ -1,4 +1,4 @@
-package mm64;
+package zelda64;
 
 import java.util.regex.Pattern;
 

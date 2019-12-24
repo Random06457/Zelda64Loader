@@ -1,4 +1,4 @@
-package mm64.Mm64Struct;
+package zelda64.Struct;
 
 import java.io.IOException;
 
@@ -8,7 +8,7 @@ import ghidra.program.model.data.Structure;
 import ghidra.program.model.data.StructureDataType;
 import ghidra.util.exception.DuplicateNameException;
 
-public class Mm64OvlRelaInfo implements StructConverter {
+public class Zelda64OvlRelaInfo implements StructConverter {
 
     @Override
     public DataType toDataType() throws DuplicateNameException, IOException {

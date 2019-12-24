@@ -1,10 +1,10 @@
-package mm64;
+package zelda64;
 
 import java.nio.ByteBuffer;
 
 import org.python.jline.internal.Log;
 
-public class Mm64Overlay {
+public class Zelda64Overlay {
     byte[] mRawData;
     long mRelaInfoOff;
     long mTextSize;
@@ -15,7 +15,7 @@ public class Mm64Overlay {
     long[] mEntries;
     boolean mRelocated;
 
-    public Mm64Overlay(byte[] data) {
+    public Zelda64Overlay(byte[] data) {
         mRelocated = false;
         mRawData = data;
         ByteBuffer buff = ByteBuffer.wrap(mRawData);

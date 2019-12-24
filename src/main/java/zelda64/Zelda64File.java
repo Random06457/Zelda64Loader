@@ -1,8 +1,8 @@
-package mm64;
+package zelda64;
 
-import mm64.Mm64Game.DmaDataEntry;
+import zelda64.Zelda64Game.DmaDataEntry;
 
-public class Mm64File {
+public class Zelda64File {
     public boolean Compressed;
     public int VRomStart;
     public int VRomEnd;
@@ -12,11 +12,11 @@ public class Mm64File {
     public boolean Deleted;
     DmaDataEntry DmaData;
 
-    public Mm64File() {
+    public Zelda64File() {
 
     }
 
-    public Mm64File(byte[] data, int vrom, int rom, boolean comp, int compSize) {
+    public Zelda64File(byte[] data, int vrom, int rom, boolean comp, int compSize) {
         Data = data;
         VRomStart = vrom;
         VRomEnd = vrom + (data != null ? data.length : compSize);
@@ -26,8 +26,8 @@ public class Mm64File {
         Deleted = false;
     }
 
-    public static Mm64File DeletedFile(int vrom, int rom, int size) {
-        Mm64File file = new Mm64File();
+    public static Zelda64File DeletedFile(int vrom, int rom, int size) {
+        Zelda64File file = new Zelda64File();
         file.Data = new byte[size];
         file.Compressed = false;
         file.Deleted = true;

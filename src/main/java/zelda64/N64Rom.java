@@ -1,4 +1,4 @@
-package mm64;
+package zelda64;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -60,9 +60,9 @@ public class N64Rom {
         return RawRom[0x3F];
     }
 
-    public N64Rom(byte[] data) throws N64RomException {
+    public N64Rom(byte[] data) throws Zelda64RomException {
         if (data.length < 0x1000 || data.length % 4 != 0)
-            throw new N64RomException("Invalid ROM Size");
+            throw new Zelda64RomException("Invalid ROM Size");
 
         // check for endian swap
         if (data[0] != (byte) 0x80 && data[1] == (byte) 0x80) {

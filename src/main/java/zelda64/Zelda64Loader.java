@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mm64;
+package zelda64;
 
-import mm64.Mm64Struct.*;
-import mm64.N64Struct.OsBootConfig;
+import zelda64.Struct.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,13 +41,13 @@ import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.lang.LanguageCompilerSpecPair;
 
-public class Mm64Loader extends AbstractLibrarySupportLoader {
+public class Zelda64Loader extends AbstractLibrarySupportLoader {
     FlatProgramAPI mApi;
-    Mm64Game mGame;
+    Zelda64Game mGame;
 
     @Override
     public String getName() {
-        return "Majora's Mask 64 Loader";
+        return "Zelda 64 Loader";
     }
 
     @Override
@@ -56,7 +55,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         List<LoadSpec> loadSpecs = new ArrayList<>();
 
         try {
-            new Mm64Game(provider.getInputStream(0).readAllBytes(), false, null);
+            new Zelda64Game(provider.getInputStream(0).readAllBytes(), false, null);
             loadSpecs.add(new LoadSpec(this, 0, new LanguageCompilerSpecPair("MIPS:BE:64:64-32addr", "o32"), true));
         } catch (Exception e) {
 
@@ -71,7 +70,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         byte[] data = provider.getInputStream(0).readAllBytes();
 
         try {
-            mGame = new Mm64Game(data, true, monitor);
+            mGame = new Zelda64Game(data, true, monitor);
         } catch (Exception e) {
             e.printStackTrace();
             mGame = null;
@@ -115,6 +114,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
             CreateEmptySegment("RAM1", entrypoint + boot.length, codeDst - 1, new MemPerm("RWX"), false);
             CreateSegment("code", codeDst, code, new MemPerm("RWX"), false);
             CreateEmptySegment("RAM2", codeDst + code.length, 0x807FFFFF, new MemPerm("RW-"), false);
+
             LoadGraphOvlTable();
             LoadActorOvlTable();
             LoadEffectSS2OvlTable();
@@ -131,14 +131,17 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
 
     }
 
-    private void LoadEffectSS2OvlTable() {
+    private void LoadGraphOvlTable() {
         try {
-            long tableOff = mGame.getEffectSS2OvlTableAddr();
+            long tableOff = mGame.getGraphOvlTableAddr();
             if (tableOff == -1)
                 return;
 
-            int entrySize = 0x1C;
-            int entryCount = 0x27;
+            int entrySize = 0x30;
+            int entryCount = mGame.IsOot() ? 6 : mGame.IsMm() ? 7 : 0;
+
+            Log.info(String.format("Found %d graph ovl entries", entryCount));
+            Log.info(String.format("graph ovl table : 0x%08X", tableOff));
 
             byte[] data = new byte[entryCount * entrySize];
             mApi.getCurrentProgram().getMemory().getBytes(mApi.toAddr(tableOff), data);
@@ -146,18 +149,20 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
 
             for (int i = 0; i < entryCount; i++) {
                 br.position(i * entrySize);
+                br.getInt();
                 int vrom = br.getInt();
-                br.getInt(); // vrom end
+                br.getInt();// vrom end
                 long vram = br.getInt() & 0xFFFFFFFFl;
-                br.getInt(); // vram end
+
+                Log.info(String.format("current ovl entry : VROM=0x%08X, virtStart=0x%08X", vrom, vram));
                 if (vram != 0)
-                    LoadOvl("effectSS2_" + i, vram, vram, new Mm64Overlay(mGame.GetFile(vrom).Data));
+                    LoadOvl("graphOvl_" + i, vram, vram, new Zelda64Overlay(mGame.GetFile(vrom).Data));
             }
+
         } catch (Exception e) {
             e.printStackTrace();
             Msg.error(this, e.getMessage());
         }
-
     }
 
     private void LoadActorOvlTable() {
@@ -167,7 +172,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
                 return;
 
             int entrySize = 0x20;
-            int entryCount = 0x2B2;
+            int entryCount = mGame.IsOot() ? 471 : mGame.IsMm() ? 690 : 0;
 
             byte[] data = new byte[entryCount * entrySize];
             mApi.getCurrentProgram().getMemory().getBytes(mApi.toAddr(tableOff), data);
@@ -185,7 +190,36 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
                 String name = (namePtr == 0) ? ("actor_" + i) : readString(namePtr);
 
                 if (vram != 0)
-                    LoadOvl(name, vram, vram, new Mm64Overlay(mGame.GetFile(vrom).Data));
+                    LoadOvl(name, vram, vram, new Zelda64Overlay(mGame.GetFile(vrom).Data));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Msg.error(this, e.getMessage());
+        }
+
+    }
+
+    private void LoadEffectSS2OvlTable() {
+        try {
+            long tableOff = mGame.getEffectSS2OvlTableAddr();
+            if (tableOff == -1)
+                return;
+
+            int entrySize = 0x1C;
+            int entryCount = mGame.IsOot() ? 37 : mGame.IsMm() ? 39 : 0;
+
+            byte[] data = new byte[entryCount * entrySize];
+            mApi.getCurrentProgram().getMemory().getBytes(mApi.toAddr(tableOff), data);
+            var br = ByteBuffer.wrap(data);
+
+            for (int i = 0; i < entryCount; i++) {
+                br.position(i * entrySize);
+                int vrom = br.getInt();
+                br.getInt(); // vrom end
+                long vram = br.getInt() & 0xFFFFFFFFl;
+                br.getInt(); // vram end
+                if (vram != 0)
+                    LoadOvl("effectSS2_" + i, vram, vram, new Zelda64Overlay(mGame.GetFile(vrom).Data));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -212,52 +246,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         return str;
     }
 
-    private void LoadGraphOvlTable() {
-        try {
-            long tableCountOff = mGame.getGraphOvlCountAddr();
-
-            if (tableCountOff == -1)
-                return;
-
-            int entrySize = 0x30;
-
-            byte[] tmp = new byte[4];
-            mApi.getCurrentProgram().getMemory().getBytes(mApi.toAddr(tableCountOff), tmp);
-            int entryCount = ByteBuffer.wrap(tmp).getInt();
-
-            Log.info(String.format("Found %d graph ovl entries", entryCount));
-
-            long startOff = (tableCountOff - entryCount * entrySize) & 0xFFFFFFFFl;
-            Log.info(String.format("graph ovl table : 0x%08X", startOff));
-            tmp = new byte[entryCount * entrySize];
-            mApi.getCurrentProgram().getMemory().getBytes(mApi.toAddr(startOff), tmp);
-            var br = ByteBuffer.wrap(tmp);
-
-            for (int i = 0; i < entryCount; i++) {
-                br.position(i * entrySize);
-                br.getInt();
-                int curVrom = br.getInt();
-                br.getInt();// vrom end
-                long virtStart = br.getInt() & 0xFFFFFFFFl;
-
-                Log.info(String.format("current ovl entry : VROM=0x%08X, virtStart=0x%08X", curVrom, virtStart));
-                if (virtStart != 0)
-                    /*
-                     * The destination address is normally somewhere on a heap (at 80379d00-80780000
-                     * in ver. Europe 1.1) but it doesn't really matter which value we choose since
-                     * each entry has a relocation table. We could calculate the loading address
-                     * like this : dst = heapEnd - filesize
-                     */
-                    LoadOvl("graphOvl_" + i, virtStart, virtStart, new Mm64Overlay(mGame.GetFile(curVrom).Data));
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Msg.error(this, e.getMessage());
-        }
-    }
-
-    private void LoadOvl(String name, long dst, long virtStart, Mm64Overlay ovl) {
+    private void LoadOvl(String name, long dst, long virtStart, Zelda64Overlay ovl) {
         Log.info(String.format("creating %s", name));
 
         // isn't really required since in our case dst == virtStart but whatever
@@ -269,7 +258,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         CreateSegment(name, dst, data, new MemPerm("RWX"), true);
         var addr = mApi.toAddr(String.format("%s::0x%08x", name, dst));
         try {
-            mApi.createData(addr.add(ovl.mRelaInfoOff), new Mm64OvlRelaInfo().toDataType());
+            mApi.createData(addr.add(ovl.mRelaInfoOff), new Zelda64OvlRelaInfo().toDataType());
             mApi.createData(addr.add(ovl.mRelaInfoOff).add(0x14),
                     new ArrayDataType(StructConverter.DWORD, ovl.mEntries.length, 4));
         } catch (Exception e) {
@@ -302,7 +291,7 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         }
     }
 
-    private void addHeaderInfo(Mm64Game game) {
+    private void addHeaderInfo(Zelda64Game game) {
         var props = mApi.getCurrentProgram().getOptions(Program.PROGRAM_INFO);
         N64Rom rom = game.mRom;
         N64CheckSum sum = new N64CheckSum(rom, 6105);
@@ -317,7 +306,8 @@ public class Mm64Loader extends AbstractLibrarySupportLoader {
         props.setString("N64 Name", rom.getName());
         props.setString("N64 Game Code", rom.getGameCode());
         props.setString("N64 Mask ROM Version", String.format("%02X", rom.getVersion()));
-        props.setString("MM64 Build", String.format("%s (%s)", game.mVersion, game.mVersion.GetBuildName()));
+        props.setString("Zelda 64 Build",
+                String.format("%s (%s)", game.GetVersionLongName(), game.mVersion.GetBuildName()));
     }
 
     @Override

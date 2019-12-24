@@ -1,4 +1,4 @@
-package mm64.N64Struct;
+package zelda64.Struct;
 
 import java.io.IOException;
 
