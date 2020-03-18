@@ -28,7 +28,7 @@ public class N64Header implements StructConverter {
         struct.add(BYTE, 0x01, null, null); // 0x3A
         struct.add(STRING, 0x04, "code", null); // 0x3B
         struct.add(BYTE, 0x01, "version", null); // 0x3F
-        struct.add(new ArrayDataType(BYTE, 0xFC0, 1), "bootstrap", null); // 0x40
+        //struct.add(new ArrayDataType(BYTE, 0xFC0, 1), "bootstrap", null); // 0x40
         return struct;
     }
 

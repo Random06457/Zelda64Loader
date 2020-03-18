@@ -3,19 +3,22 @@
  
  This can load a Majora's Mask or Ocarina Of Time ROM either as a single file or as a file system.
  
- When a ROM is loaded as a "Single File", the loader will create the nintendo 64's memory layout, load the "code" file and load all the overlay files it can find (see [Loaded overlays](#loaded-overlays) for more details).
+ When a ROM is loaded as a "Single File", the loader will create the nintendo 64's memory layout, load the `code` file and load all the overlay files it can find (see [Loaded overlays](#loaded-overlays) for more details).
  
- <img src="https://raw.githubusercontent.com/Random0666/Useless-stuff/master/Mm64Loader/ghidra_loader.png" width=40%/>
+ <img src="https://raw.githubusercontent.com/Random06457/Useless-stuff/master/Mm64Loader/ghidra_loader.png" width=40%/>
  
  When a ROM is loaded as a "File System", the loader will simply parse the DMA entries and let you extract them.
  
-<img src="https://raw.githubusercontent.com/Random0666/Useless-stuff/master/Mm64Loader/ghidra_fs.png" width=50%/>
+<img src="https://raw.githubusercontent.com/Random06457/Useless-stuff/master/Mm64Loader/ghidra_fs.png" width=50%/>
 
 # Loaded overlays
 The overlays the loader will seek for are the following:
- - Overlays specified by a table used by the "graph" thread (e.g. ovl_title)
+ - GameState overlays
  - Actor overlays
  - "Effect Soft Sprite" (aka "Effect SS2") overlays
+ - `kaleido_manager` overlays (`player_actor` and `kaleido_scope`)
+ - `map_mark_data` (specific to Ocarina Of Time)
+ - Transition effect overlays (specific to Majora's Mask)
  
 # Currently supported versions:
 ### Majora's Mask
