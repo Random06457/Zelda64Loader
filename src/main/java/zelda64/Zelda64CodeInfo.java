@@ -34,10 +34,12 @@ public class Zelda64CodeInfo {
 					0x800e5bd0, 0x800fc420, 0x800efb88, -1));
 			put(Zelda64Version.OotEuropeGC, new Zelda64CodeInfo(0x80010f00, 0xa88000, 0x800e53a0, 0x800ee1b0,
 					0x800e4ab0, 0x800fb300, 0x800eea68, -1));
-			put(Zelda64Version.OotEuropeMq, new Zelda64CodeInfo(0x80010f00, 0xa88000, 0x800e5380, 0x800ee190,
+			put(Zelda64Version.OotEuropeGCMq, new Zelda64CodeInfo(0x80010f00, 0xa88000, 0x800e5380, 0x800ee190,
 					0x800e4a90, 0x800fb2e0, 0x800eea48, -1));
-			put(Zelda64Version.OotEuropeMqDbg, new Zelda64CodeInfo(0x8001CE60, 0xa94000, 0x801162a0, 0x8011f830,
+			put(Zelda64Version.OotEuropeGCMqDbg, new Zelda64CodeInfo(0x8001CE60, 0xa94000, 0x801162a0, 0x8011f830,
 					0x801159b0, 0x8012d1a0, 0x801200f8, -1));
+			put(Zelda64Version.OotEuropeGCDbg, new Zelda64CodeInfo(0x8001ce60, 0xa94000, 0x801162c0, 0x8011f850,
+					0x801159d0, 0x8012d1c0, 0x80120118, -1));
 			put(Zelda64Version.OotJPUS10, new Zelda64CodeInfo(0x800110a0, 0xa87000, 0x800e8530, 0x800f1340, 0x800e7c40,
 					0x800fe480, 0x800f1bf8, -1));
 			put(Zelda64Version.OotJPUS11, new Zelda64CodeInfo(0x800110a0, 0xa87000, 0x800e86f0, 0x800f1500, 0x800e7e00,
@@ -48,11 +50,11 @@ public class Zelda64CodeInfo {
 					0x800fd9a0, 0x800f1108, -1));
 			put(Zelda64Version.OotJapanGcZeldaCollection, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a20,
 					0x800f0830, 0x800e7130, 0x800fd980, 0x800f10e8, -1));
-			put(Zelda64Version.OotJapanMq, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a20, 0x800f0830, 0x800e7130,
+			put(Zelda64Version.OotJapanGCMq, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a20, 0x800f0830, 0x800e7130,
 					0x800fd980, 0x800f10e8, -1));
 			put(Zelda64Version.OotUSAGC, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a20, 0x800f0830, 0x800e7130,
 					0x800fd980, 0x800f10e8, -1));
-			put(Zelda64Version.OotUSAMq, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a00, 0x800f0810, 0x800e7110,
+			put(Zelda64Version.OotUSAGCMq, new Zelda64CodeInfo(0x80010ee0, 0xa86000, 0x800e7a00, 0x800f0810, 0x800e7110,
 					0x800fd960, 0x800f10c8, -1));
 			// Majora's Mask
 			put(Zelda64Version.MmEurope10, new Zelda64CodeInfo(0x800a5d60, 0xc8a000, 0x801af760, 0x801BE0A0, 0x801aefc0,

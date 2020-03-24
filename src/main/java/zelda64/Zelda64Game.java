@@ -48,16 +48,17 @@ public class Zelda64Game {
         case OotEurope10:
         case OotEurope11:
         case OotEuropeGC:
-        case OotEuropeMq:
-        case OotEuropeMqDbg:
+        case OotEuropeGCMq:
+        case OotEuropeGCMqDbg:
+        case OotEuropeGCDbg:
         case OotJPUS10:
         case OotJPUS11:
         case OotJPUS12:
         case OotJapanGC:
         case OotJapanGcZeldaCollection:
-        case OotJapanMq:
+        case OotJapanGCMq:
         case OotUSAGC:
-        case OotUSAMq:
+        case OotUSAGCMq:
             return true;
         default:
             return false;
@@ -113,10 +114,12 @@ public class Zelda64Game {
             return gameName + " Europe 1.1";
         case OotEuropeGC:
             return gameName + " Europe GameCube";
-        case OotEuropeMq:
+        case OotEuropeGCMq:
             return gameName + " Europe Master Quest";
-        case OotEuropeMqDbg:
+        case OotEuropeGCMqDbg:
             return gameName + " Europe Master Quest Debug";
+        case OotEuropeGCDbg:
+            return gameName + " Europe GameCube Debug";
         case OotJPUS10:
             return gameName + " JP/US 1.0";
         case OotJPUS11:
@@ -127,11 +130,11 @@ public class Zelda64Game {
             return gameName + " Japan GameCube";
         case OotJapanGcZeldaCollection:
             return gameName + " Japan GameCube Zelda Collection";
-        case OotJapanMq:
+        case OotJapanGCMq:
             return gameName + " Japan Master Quest";
         case OotUSAGC:
             return gameName + " USA GameCube";
-        case OotUSAMq:
+        case OotUSAGCMq:
             return gameName + " USA Master Quest";
         default:
             return "Invalid or unknown version";

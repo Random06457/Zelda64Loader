@@ -27,7 +27,7 @@ The overlays the loader will seek for are the following:
 |----------|:-------------:|:------:|
 | Japan 1.0 | zelda@srd44 00-03-31 02:22:11 | Yes |
 | Japan 1.1 | zelda@srd44 00-04-04 09:34:16 | Yes |
-| USA Debug | zelda@srd44.00-07-06 16:46:35 | No |
+| USA Debug | zelda@srd44 00-07-06 16:46:35 | No |
 | USA Kiosk Demo | zelda@srd44 00-07-12 16:14:06 | Yes |
 | USA 1.0 | zelda@srd44 00-07-31 17:04:16 | Yes |
 | Europe 1.0 | zelda@srd44 00-09-25 11:16:53 | Yes |
@@ -52,6 +52,7 @@ The overlays the loader will seek for are the following:
 | USA Master Quest | zelda@srd022j 02-12-19 14:05:42 | Yes |
 | Europe GameCube Debug | zelda@srd022j 03-02-13 19:46:49 | No |
 | Europe Master Quest Debug | zelda@srd022j 03-02-21 00:16:31 | Yes |
+| Europe GameCube Debug | zelda@srd022j 03-02-21 00:49:18 | Yes |
 | Europe GameCube | zelda@srd022j 03-02-21 20:12:23 | Yes |
 | Europe Master Quest | zelda@srd022j 03-02-21 20:37:19 | Yes |
 | Japan GameCube Zelda Collection | zelda@srd022j 03-10-08 21:53:00 | Yes |
