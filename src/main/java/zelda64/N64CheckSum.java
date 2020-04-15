@@ -38,7 +38,7 @@ public class N64CheckSum {
     }
 
     private void Compute(N64Rom rom, int cic) throws N64CheckSumException {
-        if (rom.RawRom.length < CHECKSUM_START)
+        if (rom.mRawRom.length < CHECKSUM_START)
             throw new N64CheckSumException("Invalid File Lenght");
 
         int seed;
@@ -67,7 +67,7 @@ public class N64CheckSum {
         t1 = t2 = t3 = t4 = t5 = t6 = seed;
 
         for (pos = CHECKSUM_START; pos < CHECKSUM_END; pos += 4) {
-            int d = ByteBuffer.wrap(rom.RawRom).getInt(pos);
+            int d = ByteBuffer.wrap(rom.mRawRom).getInt(pos);
             int r = ROL(d, d & 0x1F);
 
             // increment t4 if t6 overflows
@@ -84,7 +84,7 @@ public class N64CheckSum {
                 t2 ^= t6 ^ d;
 
             if (cic == 6105)
-                t1 += ByteBuffer.wrap(rom.RawRom).getInt(0x0750 + (pos & 0xFF)) ^ d;
+                t1 += ByteBuffer.wrap(rom.mRawRom).getInt(0x0750 + (pos & 0xFF)) ^ d;
             else
                 t1 += t5 ^ d;
         }

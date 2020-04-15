@@ -16,7 +16,7 @@ public class Zelda64Game {
     public List<Zelda64File> mFiles;
 
     public Zelda64Game(N64Rom rom, boolean loadFs, TaskMonitor monitor) throws Zelda64Exception {
-        mRom = rom;
+        this.mRom = rom;
         Load();
         mFiles = null;
         if (loadFs)
@@ -34,7 +34,7 @@ public class Zelda64Game {
 
         mDmaDataOff = off + 0x30;
         try {
-            BinaryReader br = new BinaryReader(new ByteArrayProvider(mRom.RawRom), false);
+            BinaryReader br = new BinaryReader(new ByteArrayProvider(mRom.mRawRom), false);
             String build = br.readAsciiString(off, 0x30);
             mBuildName = build.replaceAll("\0+$", "").replace('\0', ' ');
             mVersion = Zelda64Version.FromString(mBuildName);
@@ -144,10 +144,10 @@ public class Zelda64Game {
 
     private int FindBuildNameOffset() {
         String pattern = "zelda@srd";
-        for (int i = 0x1000; i < mRom.RawRom.length - pattern.length(); i++) {
+        for (int i = 0x1000; i < mRom.mRawRom.length - pattern.length(); i++) {
             boolean valid = true;
             for (int j = 0; j < pattern.length(); j++) {
-                if (mRom.RawRom[i + j] != (byte) pattern.charAt(j)) {
+                if (mRom.mRawRom[i + j] != (byte) pattern.charAt(j)) {
                     valid = false;
                     break;
                 }
@@ -160,10 +160,10 @@ public class Zelda64Game {
     }
 
     public List<Zelda64File> GetFs(TaskMonitor monitor) {
-        List<Zelda64File> files = new ArrayList<Zelda64File>();
+        List<Zelda64File> ret = new ArrayList<Zelda64File>();
         int filecount = 3; // dmadata file
 
-        ByteBuffer buff = ByteBuffer.wrap(mRom.RawRom);
+        ByteBuffer buff = ByteBuffer.wrap(mRom.mRawRom);
         buff.position(mDmaDataOff);
 
         for (int i = 0; i < filecount; i++) {
@@ -176,25 +176,25 @@ public class Zelda64Game {
 
             DmaDataEntry entry = new DmaDataEntry(buff);
             Zelda64File file = entry.ToFile(this);
-            files.add(file);
+            ret.add(file);
             if (entry.Valid() && entry.Exist()) {
                 if (i == 2) // dmadata
                 {
-                    filecount = file.Data.length / 0x10;
+                    filecount = file.mData.length / 0x10;
                     if (monitor != null)
                         monitor.initialize(filecount);
                 }
             }
         }
 
-        return files;
+        return ret;
     }
 
     public Zelda64File GetFile(int vrom) {
         if (mFiles == null)
             return null;
         for (Zelda64File file : mFiles) {
-            if (file.VRomStart == vrom)
+            if (file.mVromStart == vrom)
                 return file;
         }
         return null;
@@ -240,7 +240,7 @@ public class Zelda64Game {
 
             int len = GetSize();
 
-            ByteBuffer buff = ByteBuffer.wrap(mm64.mRom.RawRom);
+            ByteBuffer buff = ByteBuffer.wrap(mm64.mRom.mRawRom);
             buff.position(RomStart);
             byte[] data = new byte[len];
             buff.get(data);

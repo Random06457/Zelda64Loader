@@ -21,5 +21,4 @@ public class Zelda64OvlRelaInfo implements StructConverter {
         // follows with and array of entry_count DWORDs
         return s;
     }
-
 }

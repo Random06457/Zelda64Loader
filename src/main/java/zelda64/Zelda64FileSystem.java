@@ -41,25 +41,25 @@ public class Zelda64FileSystem implements GFileSystem {
     private FileSystemIndexHelper<Zelda64File> fsih;
     private FileSystemRefManager refManager = new FileSystemRefManager(this);
 
-    private Zelda64Game game;
-    private boolean closed;
+    private Zelda64Game mGame;
+    private boolean mClosed;
 
     public Zelda64FileSystem(FSRLRoot fsFSRL, Zelda64Game game) {
         this.fsFSRL = fsFSRL;
-        this.game = game;
+        this.mGame = game;
         this.fsih = new FileSystemIndexHelper<>(this, fsFSRL);
-        this.closed = false;
+        this.mClosed = false;
     }
 
     public void mount(TaskMonitor monitor) {
         monitor.setMessage("Opening " + Zelda64FileSystem.class.getSimpleName() + "...");
 
-        for (Zelda64File file : game.mFiles) {
+        for (Zelda64File file : mGame.mFiles) {
             if (monitor.isCancelled()) {
                 break;
             }
-            fsih.storeFile(String.format("%08X", file.VRomStart), fsih.getFileCount(), false,
-                    file.Valid() ? file.Data.length : 0, file);
+            fsih.storeFile(String.format("%08X", file.mVromStart), fsih.getFileCount(), false,
+                    file.Valid() ? file.mData.length : 0, file);
         }
     }
 
@@ -67,7 +67,7 @@ public class Zelda64FileSystem implements GFileSystem {
     public void close() throws IOException {
         refManager.onClose();
         fsih.clear();
-        closed = true;
+        mClosed = true;
     }
 
     @Override
@@ -82,7 +82,7 @@ public class Zelda64FileSystem implements GFileSystem {
 
     @Override
     public boolean isClosed() {
-        return closed;
+        return mClosed;
     }
 
     @Override
@@ -103,8 +103,8 @@ public class Zelda64FileSystem implements GFileSystem {
     @Override
     public InputStream getInputStream(GFile file, TaskMonitor monitor) throws IOException, CancelledException {
         Zelda64File entry = fsih.getMetadata(file);
-        return (entry != null && !entry.Deleted && entry.Valid())
-                ? new ByteProviderInputStream(new ByteArrayProvider(entry.Data), 0, entry.Data.length)
+        return (entry != null && !entry.mDeleted && entry.Valid())
+                ? new ByteProviderInputStream(new ByteArrayProvider(entry.mData), 0, entry.mData.length)
                 : null;
     }
 
@@ -125,12 +125,12 @@ public class Zelda64FileSystem implements GFileSystem {
         if (!file.Valid()) {
             info.put("Info", String.format("%08X-%08X (INVALID)", -1, -1));
         } else {
-            info.put("VROM", String.format("%08X-%08X", file.VRomStart, file.VRomStart + file.Data.length)
-                    + (file.Deleted ? " (DELETED)" : ""));
-            info.put("ROM", String.format("%08X-%08X", file.RomStart, file.RomEnd + file.Data.length));
-            info.put("Size", String.format("%08X", file.Data.length));
-            if (file.Compressed)
-                info.put("Compressed Size", String.format("%08X", file.RomEnd - file.RomStart));
+            info.put("VROM", String.format("%08X-%08X", file.mVromStart, file.mVromStart + file.mData.length)
+                    + (file.mDeleted ? " (DELETED)" : ""));
+            info.put("ROM", String.format("%08X-%08X", file.mRomStart, file.mRomEnd + file.mData.length));
+            info.put("Size", String.format("%08X", file.mData.length));
+            if (file.mCompressed)
+                info.put("Compressed Size", String.format("%08X", file.mRomEnd - file.mRomStart));
         }
         return info;
     }

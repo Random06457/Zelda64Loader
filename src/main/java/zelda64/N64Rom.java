@@ -5,31 +5,31 @@ import java.nio.ByteBuffer;
 
 public class N64Rom {
 
-    public byte[] RawRom;
+    public byte[] mRawRom;
 
     public int getClockRate() {
-        return ByteBuffer.wrap(RawRom).getInt(0x4) & 0xFFFFFFF0;
+        return ByteBuffer.wrap(mRawRom).getInt(0x4) & 0xFFFFFFF0;
     }
 
     public int getEntryPoint() {
-        return ByteBuffer.wrap(RawRom).getInt(8);
+        return ByteBuffer.wrap(mRawRom).getInt(8);
     }
 
     public int getReleaseOffset() {
-        return ByteBuffer.wrap(RawRom).getInt(0xC);
+        return ByteBuffer.wrap(mRawRom).getInt(0xC);
     }
 
     public int getCRC1() {
-        return ByteBuffer.wrap(RawRom).getInt(0x10);
+        return ByteBuffer.wrap(mRawRom).getInt(0x10);
     }
 
     public int getCRC2() {
-        return ByteBuffer.wrap(RawRom).getInt(0x14);
+        return ByteBuffer.wrap(mRawRom).getInt(0x14);
     }
 
     public String getName() {
         byte[] name = new byte[0x14];
-        ByteBuffer buff = ByteBuffer.wrap(RawRom);
+        ByteBuffer buff = ByteBuffer.wrap(mRawRom);
         buff.position(0x20);
         buff.get(name, 0, name.length);
         try {
@@ -41,15 +41,15 @@ public class N64Rom {
     }
 
     public String getDeveloper() {
-        return new String(new byte[] { RawRom[0x3B] });
+        return new String(new byte[] { mRawRom[0x3B] });
     }
 
     public String getCartID() {
-        return new String(new byte[] { RawRom[0x3C], RawRom[0x3D] });
+        return new String(new byte[] { mRawRom[0x3C], mRawRom[0x3D] });
     }
 
     public String getCountryCode() {
-        return new String(new byte[] { RawRom[0x3E] });
+        return new String(new byte[] { mRawRom[0x3E] });
     }
 
     public String getGameCode() {
@@ -57,7 +57,7 @@ public class N64Rom {
     }
 
     public byte getVersion() {
-        return RawRom[0x3F];
+        return mRawRom[0x3F];
     }
 
     public N64Rom(byte[] data) throws Zelda64RomException {
@@ -66,12 +66,12 @@ public class N64Rom {
 
         // check for endian swap
         if (data[0] != (byte) 0x80 && data[1] == (byte) 0x80) {
-            RawRom = new byte[data.length];
+            mRawRom = new byte[data.length];
             for (int i = 0; i < data.length; i += 2) {
-                RawRom[i + 0] = data[i + 1];
-                RawRom[i + 1] = data[i + 0];
+                mRawRom[i + 0] = data[i + 1];
+                mRawRom[i + 1] = data[i + 0];
             }
         } else
-            RawRom = data;
+            mRawRom = data;
     }
 }
