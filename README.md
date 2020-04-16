@@ -18,7 +18,7 @@ The overlays the loader will seek for are the following:
  - "Effect Soft Sprite" (aka "Effect SS2") overlays
  - `kaleido_manager` overlays (`player_actor` and `kaleido_scope`)
  - `map_mark_data` (specific to Ocarina Of Time)
- - Transition effect overlays (specific to Majora's Mask)
+ - Transition effect (aka "FBDemo") overlays (specific to Majora's Mask)
  
 # Currently supported versions:
 ### Majora's Mask
