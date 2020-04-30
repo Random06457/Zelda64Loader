@@ -212,7 +212,7 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
             long codeDst = Zelda64CodeInfo.TABLE.get(mGame.mVersion).mCodeDst;
             byte[] code = mGame.GetFile(codeVrom).mData;
 
-            CreateEmptySegment("boot.bss", entrypoint + boot.length, codeDst - 1, new MemPerm("RWX"), false);
+            CreateEmptySegment("boot.bss", entrypoint + boot.length, codeDst - 1, new MemPerm("RW-"), false);
             CreateSegment("code", codeDst, code, new MemPerm("RWX"), false);
             CreateEmptySegment("code.bss", codeDst + code.length, 0x807FFFFF, new MemPerm("RW-"), false);
 
@@ -303,12 +303,12 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
         Log.info(String.format("creating %s", name));
 
         // isn't really required since in our case dst == virtStart but whatever
-        ovl.PerformRelocation(dst, virtStart);
+        ovl.PerformRelocation(mApi, dst, virtStart);
 
         CreateSegment(name, dst, ovl.mRawData, new MemPerm("RWX"), false);
         if (ovl.mBssSize != 0)
             CreateEmptySegment(name + ".bss", dst + ovl.mRawData.length, dst + ovl.mRawData.length + ovl.mBssSize - 1,
-                    new MemPerm("RWX"), false);
+                    new MemPerm("RW-"), false);
         var addr = mApi.toAddr(dst);
         try {
 
