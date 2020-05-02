@@ -35,12 +35,13 @@ public class Zelda64Overlay {
             mEntries[i] = buff.getInt() & 0xFFFFFFFFl;
     }
 
-    private void AddRelocEntry(FlatProgramAPI api, ByteBuffer buff, int type, long relocAddr, long ram, long fixed) {
+    private void AddRelocEntry(FlatProgramAPI api, ByteBuffer buff, int type, long relocAddr, long ram, long fixed,
+            long entry) {
         int off = (int) (relocAddr - ram);
         buff.position(off);
         byte origBytes[] = new byte[4];
         buff.get(origBytes);
-        api.getCurrentProgram().getRelocationTable().add(api.toAddr(relocAddr), type, new long[] { fixed }, origBytes,
+        api.getCurrentProgram().getRelocationTable().add(api.toAddr(relocAddr), type, new long[] { entry }, origBytes,
                 null);
 
         buff.position(off);
@@ -74,12 +75,12 @@ public class Zelda64Overlay {
             if (type == 2) // raw pointers
             {
                 if ((ins & 0xf000000) == 0) {
-                    AddRelocEntry(api, buff, type, relocAddr, ram, (ins - vram) + ram);
+                    AddRelocEntry(api, buff, type, relocAddr, ram, (ins - vram) + ram, mEntries[i]);
                 }
             } else if (type == 4) // e.g. jal
             {
                 var reloc = ins & 0xfc000000 | (ram + (((ins & 0x3ffffff) << 2 | 0x80000000) - vram) & 0xfffffff) >> 2;
-                AddRelocEntry(api, buff, type, relocAddr, ram, reloc);
+                AddRelocEntry(api, buff, type, relocAddr, ram, reloc, mEntries[i]);
 
             } else if (type == 5) // e.g. lui at, 0x8080 | (0x3C01 8080)
             {
@@ -97,8 +98,9 @@ public class Zelda64Overlay {
                     var reloc = (ptr - vram) + ram;
 
                     AddRelocEntry(api, buff, 5, prevAddr, ram,
-                            ((prevIns & 0xFFFF0000) | (reloc >> 0x10)) + (((reloc & 0x8000) != 0) ? 1 : 0));
-                    AddRelocEntry(api, buff, 6, relocAddr, ram, ins & 0xFFFF0000 | reloc & 0xFFFF);
+                            ((prevIns & 0xFFFF0000) | (reloc >> 0x10)) + (((reloc & 0x8000) != 0) ? 1 : 0),
+                            mEntries[i]);
+                    AddRelocEntry(api, buff, 6, relocAddr, ram, ins & 0xFFFF0000 | reloc & 0xFFFF, mEntries[i]);
                 }
             }
         }
