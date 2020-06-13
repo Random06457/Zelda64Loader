@@ -40,6 +40,7 @@ import ghidra.util.task.TaskMonitor;
 import ghidra.program.flatapi.FlatProgramAPI;
 import ghidra.program.model.data.ArrayDataType;
 import ghidra.program.model.data.DataType;
+import ghidra.program.model.data.StringDataType;
 import ghidra.program.model.lang.LanguageCompilerSpecPair;
 
 public class Zelda64Loader extends AbstractLibrarySupportLoader {
@@ -69,10 +70,10 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
     @Override
     protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
             TaskMonitor monitor, MessageLog log) throws CancelledException, IOException {
-        byte[] data = provider.getInputStream(0).readAllBytes();
+        byte[] romData = provider.getInputStream(0).readAllBytes();
 
         try {
-            mGame = new Zelda64Game(data, true, monitor);
+            mGame = new Zelda64Game(romData, true, monitor);
         } catch (Exception e) {
             e.printStackTrace();
             mGame = null;
@@ -83,6 +84,106 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
         mApi = new FlatProgramAPI(program, monitor);
         addHeaderInfo(mGame);
 
+        // switch the default charset to EUC-JP
+        try {
+            var dt = program.getDataTypeManager().resolve(new StringDataType(), null);
+            var settings = dt.getDefaultSettings();
+            settings.setString("charset", "EUC-JP");
+            settings.clearSetting("encoding");
+            settings.clearSetting("language");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // create the n64 memory map / add hardware registers
+        try {
+            CreateN64Memory(rom.mRawRom);
+        } catch (Exception e) {
+            e.printStackTrace();
+            mGame = null;
+            throw new CancelledException(e.getMessage());
+        }
+
+        if (!mGame.IsKnown()) {
+            throw new CancelledException("Unknown ROM");
+        }
+
+        var codeInfo = Zelda64CodeInfo.TABLE.get(mGame.mVersion);
+        long entrypoint = (rom.getEntryPoint() & 0xFFFFFFFFl) + 0x60;
+
+        // boot
+        byte[] boot = mGame.GetFile(0x00001060).mData; // should be constant
+        ByteBuffer buff = ByteBuffer.wrap(boot);
+
+        byte[] segment = new byte[(int) (codeInfo.mBootData - entrypoint)];
+        buff.get(segment);
+        CreateSegment("boot.text", entrypoint, segment, new MemPerm("R-X"), false);
+
+        segment = new byte[(int) (codeInfo.mBootRodata - codeInfo.mBootData)];
+        buff.get(segment);
+        CreateSegment("boot.data", codeInfo.mBootData, segment, new MemPerm("RW-"), false);
+
+        segment = new byte[(int) (entrypoint + boot.length - codeInfo.mBootRodata)];
+        buff.get(segment);
+        CreateSegment("boot.rodata", codeInfo.mBootRodata, segment, new MemPerm("R--"), false);
+
+        // code
+        int codeVrom = (int) codeInfo.mCodeVrom;
+        if (codeVrom != -1) {
+            CreateEmptySegment("boot.bss", entrypoint + boot.length, codeInfo.mCodeText - 1, new MemPerm("RW-"), false);
+
+            byte[] code = mGame.GetFile(codeVrom).mData;
+            buff = ByteBuffer.wrap(code);
+            buff.position(0);
+
+            segment = new byte[(int) (codeInfo.mCodeData - codeInfo.mCodeText)];
+            buff.get(segment);
+            CreateSegment("code.text", codeInfo.mCodeText, segment, new MemPerm("R-X"), false);
+
+            segment = new byte[(int) (codeInfo.mCodeRodata - codeInfo.mCodeData)];
+            buff.get(segment);
+            CreateSegment("code.data", codeInfo.mCodeData, segment, new MemPerm("RW-"), false);
+
+            segment = new byte[(int) (codeInfo.mCodeText + code.length - codeInfo.mCodeRodata)];
+            buff.get(segment);
+            CreateSegment("code.rodata", codeInfo.mCodeRodata, segment, new MemPerm("R--"), false);
+
+            CreateEmptySegment("code.bss", codeInfo.mCodeText + code.length, 0x807FFFFFl, new MemPerm("RW-"), false);
+
+            // GameStates
+            int count = mGame.IsOot() ? 6 : mGame.IsMm() ? 7 : 0;
+            LoadOvlTable(codeInfo.mGameStateOvlTable, count, 0x30, 4, 0xC, -1, "GameState");
+
+            // KaleidoMgr
+            LoadOvlTable(codeInfo.mKaleidoMgrOvlTable, 2, 0x1C, 4, 0xC, 0x18, "KaleidoMgrOvl");
+
+            // map_mark_data
+            if (mGame.IsOot())
+                LoadOvlTable(codeInfo.mMapMarkDataOvlInfo, 1, 0x18, 4, 0xC, -1, "map_mark_data");
+
+            // FBDemo
+            if (mGame.IsMm())
+                LoadOvlTable(codeInfo.mFbDemoOvlTable, 7, 0x1C, 0xC, 4, -1, "FbDemo");
+
+            // Actors
+            count = mGame.IsOot() ? 471 : mGame.IsMm() ? 690 : 0;
+            LoadOvlTable(codeInfo.mActorOvlTable, count, 0x20, 0, 8, 0x18, "Actor");
+
+            // EffectSS2
+            count = mGame.IsOot() ? 37 : mGame.IsMm() ? 39 : 0;
+            LoadOvlTable(codeInfo.mEffectSS2OvlTable, count, 0x1C, 0, 8, -1, "EffectSS2");
+        }
+
+        try {
+            mApi.addEntryPoint(mApi.toAddr(entrypoint));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void CreateN64Memory(byte[] rom) throws Exception {
+        CreateEmptySegment(".ivt", 0x80000000, 0x800003FF, new MemPerm("RWX"), false);
         CreateEmptySegment(".rdreg", 0xA3F00000, 0xA3F00027, new MemPerm("RW-"), false);
         CreateEmptySegment(".sp.dmem", 0xA4000000, 0xA4000FFF, new MemPerm("RW-"), false);
         CreateEmptySegment(".sp.imem", 0xA4001000, 0xA4001FFF, new MemPerm("RW-"), false);
@@ -98,158 +199,102 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
         CreateEmptySegment(".cartdom2addr1", 0xA5000000, 0xA5FFFFFF, new MemPerm("RW-"), false);
         CreateEmptySegment(".cartdom1addr1", 0xA6000000, 0xA7FFFFFF, new MemPerm("RW-"), false);
         CreateEmptySegment(".cartdom2addr2", 0xA8000000, 0xAFFFFFFF, new MemPerm("RW-"), false);
-        CreateSegment(".cartdom1addr2", 0xB0000000, data, new MemPerm("RW-"), false);
+        CreateSegment(".cartdom1addr2", 0xB0000000, rom, new MemPerm("RW-"), false);
         CreateEmptySegment(".pifrom", 0xBFC00000, 0xBFC007BF, new MemPerm("RW-"), false);
         CreateEmptySegment(".pifram", 0xBFC007C0, 0xBFC007FF, new MemPerm("RW-"), false);
 
-        try {
-            mApi.createData(mApi.toAddr(0xB0000000), new N64Header().toDataType());
+        mApi.createData(mApi.toAddr(0xB0000000), new N64Header().toDataType());
 
-            CreateData("RDRAM_CONFIG_REG", 0xA3F00000, StructConverter.DWORD);
-            CreateData("RDRAM_DEVICE_ID_REG", 0xA3F00004, StructConverter.DWORD);
-            CreateData("RDRAM_DELAY_REG", 0xA3F00008, StructConverter.DWORD);
-            CreateData("RDRAM_MODE_REG", 0xA3F0000C, StructConverter.DWORD);
-            CreateData("RDRAM_REF_INTERVAL_REG", 0xA3F00010, StructConverter.DWORD);
-            CreateData("RDRAM_REF_ROW_REG", 0xA3F00014, StructConverter.DWORD);
-            CreateData("RDRAM_RAS_INTERVAL_REG", 0xA3F00018, StructConverter.DWORD);
-            CreateData("RDRAM_MIN_INTERVAL_REG", 0xA3F0001C, StructConverter.DWORD);
-            CreateData("RDRAM_ADDR_SELECT_REG", 0xA3F00020, StructConverter.DWORD);
-            CreateData("RDRAM_DEVICE_MANUF_REG", 0xA3F00024, StructConverter.DWORD);
+        CreateData("RDRAM_CONFIG_REG", 0xA3F00000, StructConverter.DWORD);
+        CreateData("RDRAM_DEVICE_ID_REG", 0xA3F00004, StructConverter.DWORD);
+        CreateData("RDRAM_DELAY_REG", 0xA3F00008, StructConverter.DWORD);
+        CreateData("RDRAM_MODE_REG", 0xA3F0000C, StructConverter.DWORD);
+        CreateData("RDRAM_REF_INTERVAL_REG", 0xA3F00010, StructConverter.DWORD);
+        CreateData("RDRAM_REF_ROW_REG", 0xA3F00014, StructConverter.DWORD);
+        CreateData("RDRAM_RAS_INTERVAL_REG", 0xA3F00018, StructConverter.DWORD);
+        CreateData("RDRAM_MIN_INTERVAL_REG", 0xA3F0001C, StructConverter.DWORD);
+        CreateData("RDRAM_ADDR_SELECT_REG", 0xA3F00020, StructConverter.DWORD);
+        CreateData("RDRAM_DEVICE_MANUF_REG", 0xA3F00024, StructConverter.DWORD);
 
-            CreateData("SP_MEM_ADDR_REG", 0xA4040000, StructConverter.DWORD);
-            CreateData("SP_DRAM_ADDR_REG", 0xA4040004, StructConverter.DWORD);
-            CreateData("SP_RD_LEN_REG", 0xA4040008, StructConverter.DWORD);
-            CreateData("SP_WR_LEN_REG", 0xA404000C, StructConverter.DWORD);
-            CreateData("SP_STATUS_REG", 0xA4040010, StructConverter.DWORD);
-            CreateData("SP_DMA_FULL_REG", 0xA4040014, StructConverter.DWORD);
-            CreateData("SP_DMA_BUSY_REG", 0xA4040018, StructConverter.DWORD);
-            CreateData("SP_SEMAPHORE_REG", 0xA404001C, StructConverter.DWORD);
-            CreateData("SP_PC_REG", 0xA4080000, StructConverter.DWORD);
-            CreateData("SP_IBIST_REG", 0xA4080004, StructConverter.DWORD);
+        CreateData("SP_MEM_ADDR_REG", 0xA4040000, StructConverter.DWORD);
+        CreateData("SP_DRAM_ADDR_REG", 0xA4040004, StructConverter.DWORD);
+        CreateData("SP_RD_LEN_REG", 0xA4040008, StructConverter.DWORD);
+        CreateData("SP_WR_LEN_REG", 0xA404000C, StructConverter.DWORD);
+        CreateData("SP_STATUS_REG", 0xA4040010, StructConverter.DWORD);
+        CreateData("SP_DMA_FULL_REG", 0xA4040014, StructConverter.DWORD);
+        CreateData("SP_DMA_BUSY_REG", 0xA4040018, StructConverter.DWORD);
+        CreateData("SP_SEMAPHORE_REG", 0xA404001C, StructConverter.DWORD);
+        CreateData("SP_PC_REG", 0xA4080000, StructConverter.DWORD);
+        CreateData("SP_IBIST_REG", 0xA4080004, StructConverter.DWORD);
 
-            CreateData("DPC_START_REG", 0xA4100000, StructConverter.DWORD);
-            CreateData("DPC_END_REG", 0xA4100004, StructConverter.DWORD);
-            CreateData("DPC_CURRENT_REG", 0xA4100008, StructConverter.DWORD);
-            CreateData("DPC_STATUS_REG", 0xA410000C, StructConverter.DWORD);
-            CreateData("DPC_CLOCK_REG", 0xA4100010, StructConverter.DWORD);
-            CreateData("DPC_BUFBUSY_REG", 0xA4100014, StructConverter.DWORD);
-            CreateData("DPC_PIPEBUSY_REG", 0xA4100018, StructConverter.DWORD);
-            CreateData("DPC_TMEM_REG", 0xA410001C, StructConverter.DWORD);
+        CreateData("DPC_START_REG", 0xA4100000, StructConverter.DWORD);
+        CreateData("DPC_END_REG", 0xA4100004, StructConverter.DWORD);
+        CreateData("DPC_CURRENT_REG", 0xA4100008, StructConverter.DWORD);
+        CreateData("DPC_STATUS_REG", 0xA410000C, StructConverter.DWORD);
+        CreateData("DPC_CLOCK_REG", 0xA4100010, StructConverter.DWORD);
+        CreateData("DPC_BUFBUSY_REG", 0xA4100014, StructConverter.DWORD);
+        CreateData("DPC_PIPEBUSY_REG", 0xA4100018, StructConverter.DWORD);
+        CreateData("DPC_TMEM_REG", 0xA410001C, StructConverter.DWORD);
 
-            CreateData("DPS_TBIST_REG", 0xA4200000, StructConverter.DWORD);
-            CreateData("DPS_TEST_MODE_REG", 0xA4200004, StructConverter.DWORD);
-            CreateData("DPS_BUFTEST_ADDR_REG", 0xA4200008, StructConverter.DWORD);
-            CreateData("DPS_BUFTEST_DATA_REG", 0xA420000C, StructConverter.DWORD);
+        CreateData("DPS_TBIST_REG", 0xA4200000, StructConverter.DWORD);
+        CreateData("DPS_TEST_MODE_REG", 0xA4200004, StructConverter.DWORD);
+        CreateData("DPS_BUFTEST_ADDR_REG", 0xA4200008, StructConverter.DWORD);
+        CreateData("DPS_BUFTEST_DATA_REG", 0xA420000C, StructConverter.DWORD);
 
-            CreateData("MI_INIT_MODE_REG", 0xA4300000, StructConverter.DWORD);
-            CreateData("MI_VERSION_REG", 0xA4300004, StructConverter.DWORD);
-            CreateData("MI_INTR_REG", 0xA4300008, StructConverter.DWORD);
-            CreateData("MI_INTR_MASK_REG", 0xA430000C, StructConverter.DWORD);
+        CreateData("MI_INIT_MODE_REG", 0xA4300000, StructConverter.DWORD);
+        CreateData("MI_VERSION_REG", 0xA4300004, StructConverter.DWORD);
+        CreateData("MI_INTR_REG", 0xA4300008, StructConverter.DWORD);
+        CreateData("MI_INTR_MASK_REG", 0xA430000C, StructConverter.DWORD);
 
-            CreateData("VI_STATUS_REG", 0xA4400000, StructConverter.DWORD);
-            CreateData("VI_ORIGIN_REG", 0xA4400004, StructConverter.DWORD);
-            CreateData("VI_WIDTH_REG", 0xA4400008, StructConverter.DWORD);
-            CreateData("VI_INTR_REG", 0xA440000C, StructConverter.DWORD);
-            CreateData("VI_CURRENT_REG", 0xA4400010, StructConverter.DWORD);
-            CreateData("VI_BURST_REG", 0xA4400014, StructConverter.DWORD);
-            CreateData("VI_V_SYNC_REG", 0xA4400018, StructConverter.DWORD);
-            CreateData("VI_H_SYNC_REG", 0xA440001C, StructConverter.DWORD);
-            CreateData("VI_LEAP_REG", 0xA4400020, StructConverter.DWORD);
-            CreateData("VI_H_START_REG", 0xA4400024, StructConverter.DWORD);
-            CreateData("VI_V_START_REG", 0xA4400028, StructConverter.DWORD);
-            CreateData("VI_V_BURST_REG", 0xA440002C, StructConverter.DWORD);
-            CreateData("VI_X_SCALE_REG", 0xA4400030, StructConverter.DWORD);
-            CreateData("VI_Y_SCALE_REG", 0xA4400034, StructConverter.DWORD);
+        CreateData("VI_STATUS_REG", 0xA4400000, StructConverter.DWORD);
+        CreateData("VI_ORIGIN_REG", 0xA4400004, StructConverter.DWORD);
+        CreateData("VI_WIDTH_REG", 0xA4400008, StructConverter.DWORD);
+        CreateData("VI_INTR_REG", 0xA440000C, StructConverter.DWORD);
+        CreateData("VI_CURRENT_REG", 0xA4400010, StructConverter.DWORD);
+        CreateData("VI_BURST_REG", 0xA4400014, StructConverter.DWORD);
+        CreateData("VI_V_SYNC_REG", 0xA4400018, StructConverter.DWORD);
+        CreateData("VI_H_SYNC_REG", 0xA440001C, StructConverter.DWORD);
+        CreateData("VI_LEAP_REG", 0xA4400020, StructConverter.DWORD);
+        CreateData("VI_H_START_REG", 0xA4400024, StructConverter.DWORD);
+        CreateData("VI_V_START_REG", 0xA4400028, StructConverter.DWORD);
+        CreateData("VI_V_BURST_REG", 0xA440002C, StructConverter.DWORD);
+        CreateData("VI_X_SCALE_REG", 0xA4400030, StructConverter.DWORD);
+        CreateData("VI_Y_SCALE_REG", 0xA4400034, StructConverter.DWORD);
 
-            CreateData("AI_DRAM_ADDR_REG", 0xA4500000, StructConverter.DWORD);
-            CreateData("AI_LEN_REG", 0xA4500004, StructConverter.DWORD);
-            CreateData("AI_CONTROL_REG", 0xA4500008, StructConverter.DWORD);
-            CreateData("AI_STATUS_REG", 0xA450000C, StructConverter.DWORD);
-            CreateData("AI_DACRATE_REG", 0xA4500010, StructConverter.DWORD);
-            CreateData("AI_BITRATE_REG", 0xA4500014, StructConverter.DWORD);
+        CreateData("AI_DRAM_ADDR_REG", 0xA4500000, StructConverter.DWORD);
+        CreateData("AI_LEN_REG", 0xA4500004, StructConverter.DWORD);
+        CreateData("AI_CONTROL_REG", 0xA4500008, StructConverter.DWORD);
+        CreateData("AI_STATUS_REG", 0xA450000C, StructConverter.DWORD);
+        CreateData("AI_DACRATE_REG", 0xA4500010, StructConverter.DWORD);
+        CreateData("AI_BITRATE_REG", 0xA4500014, StructConverter.DWORD);
 
-            CreateData("PI_DRAM_ADDR_REG", 0xA4600000, StructConverter.DWORD);
-            CreateData("PI_CART_ADDR_REG", 0xA4600004, StructConverter.DWORD);
-            CreateData("PI_RD_LEN_REG", 0xA4600008, StructConverter.DWORD);
-            CreateData("PI_WR_LEN_REG", 0xA460000C, StructConverter.DWORD);
-            CreateData("PI_STATUS_REG", 0xA4600010, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM1_LAT_REG", 0xA4600014, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM1_PWD_REG", 0xA4600018, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM1_PGS_REG", 0xA460001C, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM1_RLS_REG", 0xA4600020, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM2_LAT_REG", 0xA4600024, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM2_PWD_REG", 0xA4600028, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM2_PGS_REG", 0xA460002C, StructConverter.DWORD);
-            CreateData("PI_BSD_DOM2_RLS_REG", 0xA4600030, StructConverter.DWORD);
+        CreateData("PI_DRAM_ADDR_REG", 0xA4600000, StructConverter.DWORD);
+        CreateData("PI_CART_ADDR_REG", 0xA4600004, StructConverter.DWORD);
+        CreateData("PI_RD_LEN_REG", 0xA4600008, StructConverter.DWORD);
+        CreateData("PI_WR_LEN_REG", 0xA460000C, StructConverter.DWORD);
+        CreateData("PI_STATUS_REG", 0xA4600010, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM1_LAT_REG", 0xA4600014, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM1_PWD_REG", 0xA4600018, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM1_PGS_REG", 0xA460001C, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM1_RLS_REG", 0xA4600020, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM2_LAT_REG", 0xA4600024, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM2_PWD_REG", 0xA4600028, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM2_PGS_REG", 0xA460002C, StructConverter.DWORD);
+        CreateData("PI_BSD_DOM2_RLS_REG", 0xA4600030, StructConverter.DWORD);
 
-            CreateData("RI_MODE_REG", 0xA4700000, StructConverter.DWORD);
-            CreateData("RI_CONFIG_REG", 0xA4700004, StructConverter.DWORD);
-            CreateData("RI_CURRENT_LOAD_REG", 0xA4700008, StructConverter.DWORD);
-            CreateData("RI_SELECT_REG", 0xA470000C, StructConverter.DWORD);
-            CreateData("RI_REFRESH_REG", 0xA4700010, StructConverter.DWORD);
-            CreateData("RI_LATENCY_REG", 0xA4700014, StructConverter.DWORD);
-            CreateData("RI_RERROR_REG", 0xA4700018, StructConverter.DWORD);
-            CreateData("RI_WERROR_REG", 0xA470001C, StructConverter.DWORD);
+        CreateData("RI_MODE_REG", 0xA4700000, StructConverter.DWORD);
+        CreateData("RI_CONFIG_REG", 0xA4700004, StructConverter.DWORD);
+        CreateData("RI_CURRENT_LOAD_REG", 0xA4700008, StructConverter.DWORD);
+        CreateData("RI_SELECT_REG", 0xA470000C, StructConverter.DWORD);
+        CreateData("RI_REFRESH_REG", 0xA4700010, StructConverter.DWORD);
+        CreateData("RI_LATENCY_REG", 0xA4700014, StructConverter.DWORD);
+        CreateData("RI_RERROR_REG", 0xA4700018, StructConverter.DWORD);
+        CreateData("RI_WERROR_REG", 0xA470001C, StructConverter.DWORD);
 
-            CreateData("SI_DRAM_ADDR_REG", 0xA4800000, StructConverter.DWORD);
-            CreateData("SI_PIF_ADDR_RD64B_REG", 0xA4800004, StructConverter.DWORD);
-            CreateData("SI_PIF_ADDR_WR64B_REG", 0xA4800010, StructConverter.DWORD);
-            CreateData("SI_STATUS_REG", 0xA4800018, StructConverter.DWORD);
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
-
-        if (!mGame.IsKnown())
-            return;
-
-        int entrypoint = rom.getEntryPoint() + 0x60;
-        CreateEmptySegment(".ivt", 0x80000000, 0x800003FF, new MemPerm("RWX"), false);
-        byte[] boot = mGame.GetFile(0x00001060).mData; // should be constant
-        CreateSegment("boot", entrypoint, boot, new MemPerm("RWX"), false);
-
-        int codeVrom = (int) Zelda64CodeInfo.TABLE.get(mGame.mVersion).mCodeVrom;
-        if (codeVrom != -1) {
-            long codeDst = Zelda64CodeInfo.TABLE.get(mGame.mVersion).mCodeDst;
-            byte[] code = mGame.GetFile(codeVrom).mData;
-
-            CreateEmptySegment("boot.bss", entrypoint + boot.length, codeDst - 1, new MemPerm("RW-"), false);
-            CreateSegment("code", codeDst, code, new MemPerm("RWX"), false);
-            CreateEmptySegment("code.bss", codeDst + code.length, 0x807FFFFF, new MemPerm("RW-"), false);
-
-            // GameStates
-            int count = mGame.IsOot() ? 6 : mGame.IsMm() ? 7 : 0;
-            LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mGameStateOvlTable, count, 0x30, 4, 0xC, -1,
-                    "GameState");
-
-            // KaleidoMgr
-            LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mKaleidoMgrOvlTable, 2, 0x1C, 4, 0xC, 0x18,
-                    "KaleidoMgrOvl");
-
-            // map_mark_data
-            if (mGame.IsOot())
-                LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mMapMarkDataOvlInfo, 1, 0x18, 4, 0xC, -1,
-                        "map_mark_data");
-
-            // FBDemo
-            if (mGame.IsMm())
-                LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mFbDemoOvlTable, 7, 0x1C, 0xC, 4, -1, "FbDemo");
-
-            // Actors
-            count = mGame.IsOot() ? 471 : mGame.IsMm() ? 690 : 0;
-            LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mActorOvlTable, count, 0x20, 0, 8, 0x18, "Actor");
-
-            // EffectSS2
-            count = mGame.IsOot() ? 37 : mGame.IsMm() ? 39 : 0;
-            LoadOvlTable(Zelda64CodeInfo.TABLE.get(mGame.mVersion).mEffectSS2OvlTable, count, 0x1C, 0, 8, -1,
-                    "EffectSS2");
-        }
-
-        try {
-            mApi.addEntryPoint(mApi.toAddr(entrypoint));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        CreateData("SI_DRAM_ADDR_REG", 0xA4800000, StructConverter.DWORD);
+        CreateData("SI_PIF_ADDR_RD64B_REG", 0xA4800004, StructConverter.DWORD);
+        CreateData("SI_PIF_ADDR_WR64B_REG", 0xA4800010, StructConverter.DWORD);
+        CreateData("SI_STATUS_REG", 0xA4800018, StructConverter.DWORD);
     }
 
     private String readString(long addr) {
@@ -278,6 +323,10 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
             var br = ByteBuffer.wrap(data);
 
             for (int i = 0; i < entryCount; i++) {
+
+                if (mApi.getMonitor().isCancelled())
+                    return;
+
                 br.position(i * entrySize + vromOff);
                 int vrom = br.getInt();
                 br.position(i * entrySize + vramOff);
@@ -305,7 +354,16 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
         // isn't really required since in our case dst == virtStart but whatever
         ovl.PerformRelocation(mApi, dst, virtStart);
 
-        CreateSegment(name, dst, ovl.mRawData, new MemPerm("RWX"), false);
+        if (ovl.mTextSize != 0)
+            CreateSegment(name + ".text", dst, ovl.GetText(), new MemPerm("R-X"), false);
+        if (ovl.mDataSize != 0)
+            CreateSegment(name + ".data", dst + ovl.mTextSize, ovl.GetData(), new MemPerm("RW-"), false);
+        if (ovl.mRodataSize != 0)
+            CreateSegment(name + ".rodata", dst + ovl.mTextSize + ovl.mDataSize, ovl.GetRodata(), new MemPerm("R--"),
+                    false);
+        if (ovl.mRelocSize != 0)
+            CreateSegment(name + ".reloc", dst + ovl.mTextSize + ovl.mDataSize + ovl.mRodataSize, ovl.GetRelocData(),
+                    new MemPerm("RW-"), false);
         if (ovl.mBssSize != 0)
             CreateEmptySegment(name + ".bss", dst + ovl.mRawData.length, dst + ovl.mRawData.length + ovl.mBssSize - 1,
                     new MemPerm("RW-"), false);
