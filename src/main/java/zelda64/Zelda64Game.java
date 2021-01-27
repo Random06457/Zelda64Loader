@@ -51,6 +51,7 @@ public class Zelda64Game {
         case OotEuropeGCMq:
         case OotEuropeGCMqDbg:
         case OotEuropeGCDbg:
+        case OotJPUS09:
         case OotJPUS10:
         case OotJPUS11:
         case OotJPUS12:
@@ -120,6 +121,8 @@ public class Zelda64Game {
             return gameName + " Europe Master Quest Debug";
         case OotEuropeGCDbg:
             return gameName + " Europe GameCube Debug";
+        case OotJPUS09:
+        	return gameName + " JP/US 0.9";
         case OotJPUS10:
             return gameName + " JP/US 1.0";
         case OotJPUS11:

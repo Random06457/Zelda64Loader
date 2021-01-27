@@ -392,7 +392,8 @@ public class F3DZEX {
             return String.format("gsSPPopMatrixN(G_MTX_MODELVIEW, %s)",
                     w1 == -1 ? "?" : Long.toString(sftr(w1, 0, 32) / 64));
         case G_QUAD:
-            return String.format("gsSPQuadrangle(%d, %d, %d, %s, 0)", sftr(w0, 16, 8), sftr(w0, 8, 8), sftr(w0, 0, 8),
+            // TODO: fix this
+            return String.format("gsSP1Quadrangle(%d, %d, %d, %s, 0)", sftr(w0, 16, 8), sftr(w0, 8, 8), sftr(w0, 0, 8),
                     sftrStr(w1, 0, 8));
         case G_RDPFULLSYNC:
             return "gsDPFullSync()";

@@ -3,6 +3,7 @@ package zelda64;
 public enum Zelda64Version {
     Invalid(null),
     //Ocarina Of Time
+    OotJPUS09("zelda@srd44 98-10-18 23:05:00"),
     OotJPUS10("zelda@srd44 98-10-21 04:56:31"),
     OotJPUS11("zelda@srd44 98-10-26 10:58:45"),
     OotEurope10("zelda@srd44 98-11-10 14:34:22"),

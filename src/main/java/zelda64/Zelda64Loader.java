@@ -111,6 +111,7 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
 
         var codeInfo = Zelda64CodeInfo.TABLE.get(mGame.mVersion);
         long entrypoint = (rom.getEntryPoint() & 0xFFFFFFFFl) + 0x60;
+        // TODO: ?
 
         // boot
         byte[] boot = mGame.GetFile(0x00001060).mData; // should be constant
@@ -136,7 +137,7 @@ public class Zelda64Loader extends AbstractLibrarySupportLoader {
             byte[] code = mGame.GetFile(codeVrom).mData;
             buff = ByteBuffer.wrap(code);
             buff.position(0);
-
+            
             segment = new byte[(int) (codeInfo.mCodeData - codeInfo.mCodeText)];
             buff.get(segment);
             CreateSegment("code.text", codeInfo.mCodeText, segment, new MemPerm("R-X"), false);

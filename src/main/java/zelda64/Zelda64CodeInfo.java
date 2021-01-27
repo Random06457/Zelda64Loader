@@ -49,6 +49,8 @@ public class Zelda64CodeInfo {
                     0x80134d30, 0xa94000, 0x801162a0, 0x8011f830, 0x801159b0, 0x8012d1a0, 0x801200f8, -1));
             put(Zelda64Version.OotEuropeGCDbg, new Zelda64CodeInfo(0x80009410, 0x8000afc0, 0x8001ce60, 0x80115440,
                     0x80134d50, 0xa94000, 0x801162c0, 0x8011f850, 0x801159d0, 0x8012d1c0, 0x80120118, -1));
+        	put(Zelda64Version.OotJPUS09, new Zelda64CodeInfo(0x80006230, 0x80006550, 0x800110a0, 0x800e74c0,
+        			0x80105b50, 0xa87000, 0x800e8320, 0x800f1130, 0x800e7a30, 0x800fe270, 0x800f19e8, -1));
             put(Zelda64Version.OotJPUS10, new Zelda64CodeInfo(0x80006230, 0x80006550, 0x800110a0, 0x800e76b0,
                     0x80105d60, 0xa87000, 0x800e8530, 0x800f1340, 0x800e7c40, 0x800fe480, 0x800f1bf8, -1));
             put(Zelda64Version.OotJPUS11, new Zelda64CodeInfo(0x80006230, 0x80006550, 0x800110a0, 0x800e7870,
@@ -66,6 +68,7 @@ public class Zelda64CodeInfo {
             put(Zelda64Version.OotUSAGCMq, new Zelda64CodeInfo(0x800060b0, 0x800063a0, 0x80010ee0, 0x800e6b80,
                     0x80104e00, 0xa86000, 0x800e7a00, 0x800f0810, 0x800e7110, 0x800fd960, 0x800f10c8, -1));
             // Majora's Mask
+            // TODO: support GC roms
             put(Zelda64Version.MmEurope10, new Zelda64CodeInfo(0x80096b80, 0x800982e0, 0x800a5d60, 0x801ae980,
                     0x801d4380, 0xc8a000, 0x801af760, 0x801BE0A0, 0x801aefc0, 0x801c90b0, -1, 0x801c90f0));
             put(Zelda64Version.MmEurope11, new Zelda64CodeInfo(0x80096cc0, 0x80098420, 0x800a5fe0, 0x801aed20,

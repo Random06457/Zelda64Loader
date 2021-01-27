@@ -41,6 +41,7 @@ The overlays the loader will seek for are the following:
 
 | Version | Build ID | Supported |
 |----------|:-------------:|:------:|
+| JP/US 0.9 | zelda@srd44 98-10-18 23:05:00 | Yes |
 | JP/US 1.0 | zelda@srd44 98-10-21 04:56:31 | Yes |
 | JP/US 1.1 | zelda@srd44 98-10-26 10:58:45 | Yes |
 | Europe 1.0 | zelda@srd44 98-11-10 14:34:22 | Yes |
